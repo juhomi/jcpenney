@@ -1,0 +1,2 @@
+
+callback6398.add(function(){Bootstrapper.setCurrentRuleId(6398);var global=Bootstrapper.global;global.CI_PageType='PRODUCT';global.CI_ItemIDs=CI_ItemID;Bootstrapper.insertScript('https://cts-secure.channelintelligence.com/841068_confirmation.js');});

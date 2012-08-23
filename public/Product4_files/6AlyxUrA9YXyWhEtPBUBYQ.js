@@ -1,0 +1,2 @@
+
+Bootstrapper.bindDOMParsed(function(){try{Bootstrapper.setCurrentRuleId(7360);var zid='ZN_2azMJWsCJFTYoEQ';var ZN_2azMJWsCJFTYoEQ_ed='';var ZN_2azMJWsCJFTYoEQ_url='//siteintercept.qualtrics.com/WRSiteInterceptEngine/?Q_ZID='+zid+ZN_2azMJWsCJFTYoEQ_ed;var ZN_2azMJWsCJFTYoEQ_sampleRate=100;var theDiv=document.createElement('div');theDiv.id=zid;if(Math.random()<ZN_2azMJWsCJFTYoEQ_sampleRate/100){Bootstrapper.insertScript(ZN_2azMJWsCJFTYoEQ_url+'&Q_LOC='+encodeURIComponent(window.location.href));};}catch(e){Bootstrapper.reportException(e);}});

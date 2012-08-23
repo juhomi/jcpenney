@@ -1,0 +1,2456 @@
+/* This Site Intercept is not active (ESIE02):  SI_3DHqbiTOWBGcTkw */try {
+/*****************
+ * Setup Module
+ ****************/
+if(window.QSI === undefined) window.QSI = {};
+if (!QSI.dbg)
+QSI.dbg = {
+	c:function(){}
+};
+if (QSI.reg === undefined) QSI.reg = {};
+if (QSI.ed === undefined) QSI.ed = {};
+if (QSI.global === undefined)
+	QSI.global = {
+		currentZIndex:2000000000,
+		imagePath:"http://siteintercept.qualtrics.com/WRSiteInterceptEngine/../WRQualtricsShared/Graphics",
+		graphicPath:"http://siteintercept.qualtrics.com/WRSiteInterceptEngine/../WRQualtricsSiteIntercept/Graphic.php?IM=",
+		intercepts:{}
+	};
+
+//This is used by IE to get the stored user data off the storage element
+QSI.id = 'ZN_2azMJWsCJFTYoEQ';
+
+QSI.Browser = {
+	name:'Firefox',
+	version:14
+};
+QSI.currentURL = window.location.href.split('?')[0];
+/****************
+* Global Includes
+****************/
+if(!QSI.util)
+QSI.util = {
+	$:function(n)
+	{
+		if (typeof n == 'string')
+			n = document.getElementById(n);
+		return n;
+	},
+	setStyle:function(el,s)
+	{
+		for (var sid in s)
+		{
+			try {
+				el.style[sid] = s[sid];
+			} catch(e){}
+		}
+	},
+	buildQueryString:function(obj)
+	{
+		var str = [];
+		for(var p in obj)
+			str.push(encodeURIComponent(p) + "=" + encodeURIComponent(obj[p]));
+		return str.join("&");
+	},
+	generateRandomID:function(prefix)
+	{
+		return prefix+'_'+(Math.round(Math.random()*100000000));
+	},
+	build:function(type,att,inner)
+	{
+		var el = document.createElement(type);
+
+		if (att)
+		{
+			for (var id in att)
+			{
+				switch (id)
+				{
+					case 'style':
+						this.setStyle(el,att[id]);
+					break;
+					case 'className':
+						el.className = att[id];
+					break;
+					case 'id':
+						el.id = att[id];
+					break;
+					default:
+						el.setAttribute(id,att[id]);
+				}
+			}
+		}
+		if (inner)
+		{
+
+			if (QSI.util.isString(inner))
+			{
+				if (type == 'style' && el.styleSheet)
+				{
+					el.styleSheet.cssText = inner;
+				}
+				else
+				{
+					el.appendChild(document.createTextNode(String(inner)));
+				}
+			}
+			else if (QSI.util.isArray(inner))
+			{
+				for (var i=0,ilen=inner.length;i<ilen;i++)
+				{
+					var ch = inner[i];
+					if(typeof ch=='string' || typeof ch=='number')
+					{
+						el.appendChild(document.createTextNode(String(ch)));
+					}
+					else if (ch)
+					{
+						if(ch.nodeType)
+						{
+							el.appendChild(ch);
+						}
+					}
+				}
+			}
+		}
+		return el;
+	},
+	showTrialIcon:function()
+	{
+		if (this.trialIcon)
+			return;
+		var trialLogo = this.build('div', {}, [
+			this.build('img', {src:QSI.global.imagePath+"/siteintercept/logo.png"})
+		]);
+		this.trialIcon = trialLogo;
+		QSI.util.setStyle(trialLogo, {opacity:.5, padding:'20px', bottom:"0", right:"0", position:"fixed"});
+		document.body.appendChild(trialLogo);
+	},
+	Class:function(c)
+	{
+		function klass()
+		{
+			try {
+				
+				this.initialize.apply(this, arguments);
+			}
+			catch(e) {QSI.dbg.c(e);}
+
+		}
+		klass.prototype = c;
+		klass.prototype.globalInitialize = function(options)
+		{
+			QSI.dbg.c(options);
+			this.options = options || {};
+			this.id = this.options.id;
+			this.type = this.options.type;
+			this.displayOptions = options.displayOptions || {};
+			this.interceptDisplayOptions = options.interceptDisplayOptions || {};
+			this.actionOptions = options.actionOptions || {};
+			if (this.getType() != 'PopUnder')
+			{
+				this.killPopUnder();
+			}
+		};
+		klass.prototype.getType = function()
+		{
+			return this.type;
+		};
+		klass.prototype.getTarget = function(ed)
+		{
+			var url = this.options.targetURL;
+			var embeddedData = QSI.EmbeddedData.getEmbeddedData(this.id, ed);
+
+			if (embeddedData)
+			{
+				embeddedData = encodeURIComponent(embeddedData);
+				if(QSI.Browser.name == 'Internet Explorer' && QSI.Browser.version < 9)
+				{
+					embeddedData = embeddedData.substring(0, 2050 - url.length);
+				}
+				url += ("&Q_ED=" + embeddedData);
+			}
+			
+			return url;
+		};
+		klass.prototype.resetStyles = function()
+		{
+			if (this.options.resetStyle)
+				document.body.appendChild(QSI.util.build('style',{type:'text/css'},this.options.resetStyle));
+		};
+		klass.prototype.killPopUnder = function()
+		{
+			try {
+				var name = 'QSIPopUnder_' + this.id
+				if (QSI.cookie.get(name))
+				{
+					var win = window.open('', name);
+					if (win && win.w)
+					{
+						win.w.popunderDead = true;
+					}
+					win.close();
+					QSI.cookie.erase(name);
+				}
+			}catch(e){}
+		};
+		klass.prototype.shouldShow = function()
+		{
+			var show = true;
+			if (this.interceptDisplayOptions.noshow != 0)
+			{
+				if (QSI.cookie.get(this.id + '_intercept') != null)
+				{
+					show = false;
+				}
+				else
+				{
+					QSI.cookie.set(this.id + '_intercept',true,this.interceptDisplayOptions.noshow,this.interceptDisplayOptions.cookieDomain);
+				}
+			}
+			else
+			{
+				QSI.cookie.erase(this.id + '_intercept');
+			}
+			return show;
+		};
+		return klass;
+	},
+	evalJSON:function(json)
+	{
+		try {
+	      return eval('(' + json + ')');
+	    } catch (e) {QSI.dbg.c(e);}
+	},
+	isString:function(s)
+	{
+		return (typeof(s)=='string');
+	},
+	isArray:function(a)
+	{
+		return typeof(a)=='object'&&(a instanceof Array);
+	},
+	isIE6:function()
+	{
+		return this.isIE(6);
+	},
+	isIE8:function()
+	{
+		return this.isIE(8);
+	},
+	isIE:function(v)
+	{
+		if(QSI.Browser.name != 'Internet Explorer')
+			return false;
+		if(!v)
+			return true;
+		return v == QSI.Browser.version;
+	},
+	isChrome:function()
+	{
+		return QSI.Browser == 'Chrome';
+	},
+	isOpera:function()
+	{
+		return QSI.Browser == 'Opera';
+	},
+	isFF:function()
+	{
+		return QSI.Browser == 'Firefox';
+	},
+	removePx:function(str)
+	{
+		str = str || '';
+		var index = str.indexOf('px');
+		if (index > 0)
+			str = str.substr(0,index);
+		return str;
+	},
+	getDimensions:function(el)
+	{
+		var inDom = true;
+		if (!el.parentNode || !el.parentNode.tagName)
+		{
+			document.body.appendChild(el);
+			inDom = false;
+		}
+		var display = el.style.display || this.getComputedStyle(el).display;
+		if (display != 'none' && display != null) // Safari bug
+			return {width: el.offsetWidth, height: el.offsetHeight};
+		var els = el.style;
+		var originalVisibility = els.visibility;
+		var originalPosition = els.position;
+		var originalDisplay = els.display;
+		els.visibility = 'hidden';
+		els.position = 'absolute';
+		els.display = 'block';
+		var originalWidth = el.clientWidth;
+		var originalHeight = el.clientHeight;
+		els.display = originalDisplay;
+		els.position = originalPosition;
+		els.visibility = originalVisibility;
+		if (!inDom)
+		{
+			el.parentNode.removeChild(el);
+		}
+		return {width: originalWidth, height: originalHeight};
+	},
+	cumulativeOffset: function(el,incb) {
+		
+		var t=0, l=0, bt=0, bl=0, ctb=0,clb=0;
+		try{
+			do {
+				if (incb)
+				{
+					if (!this.isIE8())
+					{
+						var st=this.getComputedStyle(el);
+						bt = st.borderTopStyle=='none'?0:this.parseBorderSize(st.borderTopWidth);
+						bl = st.borderLeftStyle=='none'?0:this.parseBorderSize(st.borderLeftWidth);
+					}
+				}
+				t += (el.offsetTop  || 0)+bt;
+				l += (el.offsetLeft || 0)+bl;
+				ctb += bt;
+				clb += bl;
+				el = el.offsetParent;
+			} while (el);
+		}
+		catch(e){}	
+		return {left:l, top:t,bleft:clb,btop:ctb};
+	},
+	scrollTop:function()
+	{
+		if (document.body.scrollTop)
+			return document.body.scrollTop;
+		return document.documentElement.scrollTop;
+	},
+	parseBorderSize:function(s)
+	{
+		if (s.indexOf('px') > 0)
+		{
+			s = s.substr(0,s.indexOf('px'));
+		}
+		else if (s.indexOf('em') > 0)
+		{
+			s = (s.substr(0,s.indexOf('em')))*16;
+		}
+		else
+		{
+			switch(s)
+			{
+				case 'thin':
+					s=1;
+				break;
+				case 'medium':
+					s=3;
+				break;
+				case 'thick':
+					s=5;
+				break
+				default:
+					s=0;
+			}
+			if (this.isIE())
+				s+=1;
+		}
+		return parseFloat(s);
+	},
+	getComputedStyle:function(el) 
+	{
+		return el.currentStyle || window.getComputedStyle(el,null);
+	},
+	getWindowSize:function(win)
+	{
+		var w=win||window;
+		var s = this.getPageSize(win);
+		var width = w.outerWidth || s.width;
+		var height = w.outerHeight || s.height;
+		return {width:width,height:height};
+	},
+	getPageSize:function(win)
+	{
+		win = win || window;
+		var windowWidth, windowHeight;
+		if (win.self.innerHeight) {	// all except Explorer
+			windowWidth = win.self.innerWidth;
+			windowHeight = win.self.innerHeight;
+		} else if (win.document.documentElement && win.document.documentElement.clientHeight) { // Explorer 6 Strict Mode
+			windowWidth = win.document.documentElement.clientWidth;
+			windowHeight = win.document.documentElement.clientHeight;
+		} else if (win.document.body) { // other Explorers
+			windowWidth = win.document.body.clientWidth;
+			windowHeight = win.document.body.clientHeight;
+		}
+		return {width:windowWidth, height:windowHeight};
+	},
+	getScrollOffsets:function()
+	{
+		var scrOfX = 0, scrOfY = 0;
+		if( typeof( window.pageYOffset ) == 'number' ) {
+			//Netscape compliant
+			scrOfY = window.pageYOffset;
+			scrOfX = window.pageXOffset;
+		}
+		else if( document.body && ( document.body.scrollLeft || document.body.scrollTop ) ) {
+			//DOM compliant
+			scrOfY = document.body.scrollTop;
+			scrOfX = document.body.scrollLeft;
+		}
+		else if( document.documentElement && ( document.documentElement.scrollLeft || document.documentElement.scrollTop ) ) {
+			//IE6 standards compliant mode
+			scrOfY = document.documentElement.scrollTop;
+			scrOfX = document.documentElement.scrollLeft;
+		}
+		return [ scrOfX, scrOfY ];
+	},
+	pageMode:function(){
+		return ( document.compatMode == 'CSS1Compat' ) ? 'Standards' : 'Quirks';
+	},
+	isFixed:function()
+	{
+		return !(QSI.Browser.name == 'Internet Explorer' && (this.pageMode() != 'Standards' || QSI.util.isIE6()));
+	},
+	fixPNG:function(img,width,height)
+	{
+		var temp = new Image();
+		img.style.backgroundColor='transparent';
+		var node = QSI.util.build('span',{
+			id:img.id,
+			className:img.className,
+			title:img.title,
+			//cssText:img.cssText,
+			fontSize:0,
+			onclick:img.onclick,
+			style:{
+				filter:"progid:DXImageTransform.Microsoft.AlphaImageLoader(src='" + img.src + "', sizingMethod='scale')",
+				width:img.style.width || img.width,
+				height:img.style.height || img.height,
+				position:img.style.position,
+				top:img.style.top,
+				left:img.style.left,
+				cursor:img.style.cursor
+			}
+		}, '');
+
+		temp.onload = function()
+		{
+			node.style.display = 'inline-block';
+	        node.style.setAttribute('filter', "progid:DXImageTransform.Microsoft.AlphaImageLoader(src='" + img.src + "', sizingMethod='scale')");
+			node.style.width = img.style.width || temp.width;
+			node.style.height = img.style.height || temp.height;
+		};
+		temp.src = img.src;
+		//document.body.appendChild(temp);
+        return node;
+	},
+	openTarget:function(url, options)
+	{
+		if (!url)
+			return;
+		if (options.targetNewWindow)
+		{
+			try {
+				var size = QSI.util.getPageSize();
+				var width = options.targetFullScreen?screen.availWidth||screen.width||size.width:options.targetWidth;
+				var height = options.targetFullScreen?screen.availHeight||screen.height||size.height:options.targetHeight;
+				var win = window.open(url,'targetwindow','location=1,status=1,scrollbars=1,resizable=yes,width='+width+',height='+height);
+
+				setTimeout(function(){win.moveTo(0,0);},500);
+			}
+			catch(e){QSI.dbg.c(e);}
+		}
+		else if (options.targetEmbedded)
+		{
+			new QSI.EmbeddedTarget(url, options);
+		}
+		else if (options.targetPopUnder)
+		{
+			
+			new QSI.PopUnderTarget(url, options);
+		}
+		else
+		{
+			window.location = url;
+		}
+
+	},
+	impress:function(url)
+	{
+		if (url)
+		{
+			var i = QSI.util.build('img',{src:url+'&r=' +(new Date()).getTime(),style:{display:'none'}});
+			document.body.appendChild(i);
+		}
+	},
+	getQueryParam:function(url,key)
+	{
+		key = key.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+		var regexS = "[\\?&]"+key+"=([^&#]*)";
+		var regex = new RegExp(regexS);
+		var results = regex.exec(url);
+		if( results == null )
+			return "";
+		else
+			return results[1];
+	},
+	decodeURL:function(str)
+	{
+		return unescape(str.replace(/\+/g, " "));
+	},
+	capFirst:function(str)
+	{
+		return str.charAt(0).toUpperCase() + str.slice(1);
+	},
+	observe:function(el,e,f)
+	{
+		if(el)
+		{
+			if (el.addEventListener)
+			{ 
+				 el.addEventListener(e, f, false);
+			}
+			else if (el.attachEvent)
+			{ 
+				el.attachEvent( "on" + e, f );
+			} 
+			else if (el['on' + this.capFirst(e)])
+			{
+				el['on' + this.capFirst(e)] = f;
+			}
+		}
+		
+	},
+	stopObserving:function(el,e,f)
+	{
+		if (el.removeEventListener)
+		{ 
+			 el.removeEventListener(e, f, false);
+		}
+		else if (el.detachEvent)
+		{ 
+			el.detachEvent( "on" + e, f );
+		} 
+		else if (el['on' + this.capFirst(e)])
+		{
+			delete(el['on' + this.capFirst(e)]);
+		}
+	},
+	hasReachedScrollPosition:function(percentage)
+	{
+		var scrollHeight = this.getScrollOffsets()[1];
+		var pageHeight = this.getPageSize().height;
+		var bodyHeight = document.body.scrollHeight;
+		
+		var eventHeight = bodyHeight * (percentage / 100);
+		if(scrollHeight + pageHeight >= eventHeight)
+			return true;
+		return false;
+	},
+	remove:function(el)
+	{
+		if (el)
+			el.parentNode.removeChild(el);	
+	},
+	addContainer:function(id)
+	{
+		if (!this.$(id))
+		{
+			var n = this.build('div',{id:id,style:{display:'none'}});
+			document.body.appendChild(n);
+		}
+	},
+	positionFixed:function(el, posFromTop, posFromBottom)
+	{
+		el.style.position = "absolute";
+		var lastPosition = 0;
+		var index = 0;
+		var pageHeight = this.getPageSize().height;
+		var bodyHeight = document.body.scrollHeight;
+		var scrollTop = QSI.util.scrollTop();
+		var timer;
+		if(scrollTop > 0)
+		{
+			if(posFromBottom == 'auto')
+			{
+				el.style.top = (scrollTop + parseInt(posFromTop)) + "px";
+				el.style.bottom = posFromBottom;
+			}
+			else if (posFromTop == 'auto')
+			{
+				el.style.bottom = ((scrollTop + pageHeight) - parseInt(posFromTop)) + 'px';
+				el.style.top = posFromTop;
+			}
+		}
+		if(typeof(posFromTop) == 'string' && posFromTop.indexOf('px') > -1)
+		{
+			posFromTop = parseInt(posFromTop);
+		}
+		if(typeof(posFromBottom) == 'string' && posFromBottom.indexOf('px') > -1)
+		{
+			posFromBottom = parseInt(posFromBottom);	
+		}
+		var scrollToPosition = function(){
+			clearTimeout(timer);
+			timer = setTimeout(function(){
+				var scrollTop = QSI.util.scrollTop();
+				if(scrollTop < 0 || (scrollTop + pageHeight) > bodyHeight)
+					return;
+				var targetPos = scrollTop + posFromTop;
+				var diff = targetPos - lastPosition;
+				var direction = (diff >= 0)?20:-20;
+				if(Math.abs(diff) < 10)
+					direction = diff;
+				var interval;
+				
+				lastPosition = targetPos;
+				if(posFromBottom == 'auto')
+				{
+					interval = setInterval(function(){
+						var newTop = parseInt(el.style.top) + direction;
+						el.style.top = newTop + "px";
+						el.style.bottom = posFromBottom;
+						if(direction > 0)
+						{
+							if(newTop >= targetPos)
+							{
+								clearInterval(interval);
+								QSI.util.observe(window, 'scroll', scrollToPosition);
+							}
+						}
+						else
+						{
+							if(newTop <= targetPos)
+							{
+								clearInterval(interval);
+								QSI.util.observe(window, 'scroll', scrollToPosition);
+							}
+						}
+						QSI.util.observe(window, 'scroll', scrollToPosition);
+					}, 15);
+				}
+				else if (posFromTop == 'auto')
+				{
+					interval = setInterval(function(){
+						var newBottom = parseInt(el.style.bottom) + direction;
+						el.style.bottom = ((scrollTop + pageHeight) - posFromBottom) + 'px';
+						el.style.top = posFromTop;
+						el.style.bottom = newBottom + "px";
+						if(direction > 0)
+						{
+							if(newBottom >= targetPos)
+							{
+								clearInterval(interval);
+								QSI.util.observe(window, 'scroll', scrollToPosition);
+							}
+						}
+						else
+						{
+							if(newBottom <= targetPos)
+							{
+								clearInterval(interval);
+								QSI.util.observe(window, 'scroll', scrollToPosition);
+							}
+						}
+						QSI.util.observe(window, 'scroll', scrollToPosition);
+					}, 15);
+					
+				}
+			}, 60);
+
+		};
+		QSI.util.observe(window, 'scroll', scrollToPosition);
+	},
+	watchPage:function()
+	{
+		var that = this;
+		this.Page.onResize();
+		this.Page.onScroll();
+		this.observe(window,'resize',function(){that.Page.onResize()});
+		this.observe(window,'scroll',function(){that.Page.onScroll()});
+	},
+	Page:{
+		viewport:{},
+		page:{},
+		scroll:{},
+		onResize:function()
+		{
+			this.updateViewport();
+			this.updatePage();
+		},
+		onScroll:function()
+		{
+			this.updateScroll();
+		},
+		updatePage:function()
+		{
+			var vpw, vph;
+			if (window.innerHeight && window.scrollMaxY) 
+			{
+				vpw = document.body.scrollWidth;
+				vph = window.innerHeight + window.scrollMaxY;
+			} 
+			else if (document.body.scrollHeight > document.body.offsetHeight) 
+			{
+				vpw = document.body.scrollWidth;
+				vph = document.body.scrollHeight;
+			} 
+			else
+			{
+				vpw = document.body.offsetWidth;
+				vph = document.body.offsetHeight;
+			}
+			this.page = {
+				width: vpw,
+				height: vph
+			};
+		},
+		updateScroll:function()
+		{
+			var x, y;
+			if (self.pageYOffset) {
+				x = self.pageXOffset;
+				y = self.pageYOffset;
+			} 
+			else if (document.documentElement && document.documentElement.scrollTop)
+			{
+				x = document.documentElement.scrollLeft;
+				y = document.documentElement.scrollTop;
+			} 
+			else if (document.body)
+			{
+				x = document.body.scrollLeft;
+				y = document.body.scrollTop;
+			};
+			this.scroll = {
+				x: x,
+				y: y
+			};
+		},
+		updateViewport:function()
+		{
+			var ww, wh;
+			if (self.innerHeight)
+			{
+				ww = self.innerWidth;
+				wh = self.innerHeight;
+			} 
+			else if (document.documentElement && document.documentElement.clientHeight) 
+			{
+				ww = document.documentElement.clientWidth;
+				wh = document.documentElement.clientHeight;
+			} 
+			else if (document.body) 
+			{
+				ww = document.body.clientWidth;
+				wh = document.body.clientHeight;
+			}
+			this.viewport = {
+				width: ww,
+				height: wh
+			};
+		},
+		getScrollPct:function(bottom)
+		{
+			return {
+				x:Math.round(((this.scroll.x+(bottom?this.viewport.width:0))/this.page.width) * 100),
+				y:Math.round(((this.scroll.y+(bottom?this.viewport.height:0))/this.page.height) * 100)
+			};
+		}
+	}
+};/*****************
+ * Cookie Module
+ ****************/
+QSI.cookie = {
+	set:function(n,v,d,dm) {
+		var e="";
+		if(d){
+			var f=new Date();
+			f.setTime(f.getTime()+(d*86400000));
+			var e="; expires="+f.toGMTString();
+		}
+		var dmn = '';
+		if (dm && (dm != ''))
+			dmn = "domain="+dm;
+		document.cookie=n+"="+v+e+"; path=/; "+dmn;
+	},
+	get:function(n) {
+		var e=n+"=";
+		var ca=document.cookie.split(';');
+		for(var i=0,ilen=ca.length;i<ilen;i++) 
+		{
+			var c=ca[i];
+			while(c.charAt(0)==' ')c=c.substring(1,c.length);
+			if (c.indexOf(e)==0)return c.substring(e.length,c.length);
+		}
+		return null;
+	},
+	erase:function(n) {
+		this.set(n,"",-1);
+	}
+};/*****************
+ * Profile Module
+ ****************/
+if(!QSI.profile)
+QSI.profile = {
+	namespace:"QSI_",
+	set:function(category, name, value, permanent) {
+		try
+		{
+			if(this.hasSessionStorage())
+			{
+				var storage;
+				if(permanent)
+					storage = localStorage;
+				else
+					storage = sessionStorage;
+				if(storage[this.namespace + category])
+				{
+					var data = JSON.parse(storage[this.namespace + category]);
+					data[name] = value;
+					data = JSON.stringify(data);
+					storage[this.namespace + category] = data;
+				}
+				else
+				{
+					var newObject = {};
+					newObject[name] = value;
+					newObject = JSON.stringify(newObject);
+					storage[this.namespace + category] = newObject;
+				}
+			}
+			else
+			{
+				var data = QSI.userData.getUserData(this.namespace + category);
+				if(permanent)
+					data["PMT_" + name] = JSON.stringify(value);
+				else
+					data[name] = JSON.stringify(value);
+				QSI.userData.setUserData(this.namespace + category, data);
+			}
+			
+		}
+		catch (e){QSI.dbg.c(e);}
+	},
+	get:function(category, name, permanent) {
+		
+		try {
+			if(this.hasSessionStorage())
+			{
+				var storage;
+				if(permanent)
+					storage = localStorage;
+				else
+					storage = sessionStorage;
+				if(storage[this.namespace + category])
+				{
+					if(name)
+					{
+						var data = storage[this.namespace + category];
+						data = JSON.parse(data);
+						return (data[name])?data[name]:null;
+					}
+					return JSON.parse(storage[this.namespace + category]);
+
+				}
+			}
+			else
+			{
+				var data = QSI.userData.getUserData(this.namespace + category);
+				var value;
+				if(data[name])
+					value = JSON.parse(data[name]);
+				else
+					value = null;
+				return value;
+			}
+		}
+		catch(e){QSI.dbg.c(e);}
+		return null;
+	},
+	erase:function(category, name, permanent) {
+		try {
+			if(this.hasSessionStorage())
+			{
+				var storage;
+				if(permanent)
+					storage = localStorage;
+				else
+					storage = sessionStorage;
+				if(!name)
+				{
+					storage.removeItem(this.namespace + category);
+				}
+				else
+				{
+					var data = JSON.parse(storage[this.namespace + category]);
+					delete data[name];
+					data = JSON.stringify(data);
+					storage[this.namespace + category] = data;
+				}
+			}
+			else
+			{
+				if(!name)
+					QSI.userData.clearUserData(this.namespace + category);
+				else
+				{
+					if(permanent)
+						QSI.userData.eraseUserData(this.namespace + category, name);
+					else
+						QSI.userData.eraseUserData(this.namespace + category, "PMT_" + name)
+				}
+			}
+		}
+		catch(e){QSI.dbg.c(e);}
+	},
+	hasSessionStorage:function()
+	{
+		try 
+		{
+			return 'sessionStorage' in window && window['sessionStorage'] !== null;
+		}
+		catch (e)
+		{
+			return false;
+		}
+	}
+};/*****************
+ * History Module
+ ****************/
+if (!QSI.history)
+QSI.history = {
+	limit:2000,
+	logVisit:function(siid, asid)
+	{
+		
+		this.logCurrentURL();
+		this.logSearch();
+		this.startFocusTracking();
+		this.startClickTracking();
+		this.logReferrer();
+		if (asid)
+			this.logActionSet(asid);
+	},
+	startFocusTracking:function()
+	{
+		if (this.started)
+			return;
+		try {
+			this.started = true;
+			
+			this.focusTime = this.getFocusTime();
+			this.blurTime = this.getBlurTime();
+			
+			var interval = 1;
+			var that = this;
+			setInterval(function(){
+				if (that.focused)
+					that.focusTime+=interval;
+				else
+					that.blurTime+=interval;
+				
+				//console.log('focus:',that.focusTime,'blur:',that.blurTime);
+					
+			},interval*1000);
+			var focus = function(){
+				that.focused = true;
+			};
+			var blur = function(){
+				that.focused = false;
+			};
+			focus();
+			
+		
+			QSI.util.observe(window,'focus',focus);
+			QSI.util.observe(window,'blur',blur);
+			QSI.util.observe(window,'unload',function(){
+				QSI.profile.set('History','BlurTime', that.blurTime);
+				QSI.profile.set('History','FocusTime', that.focusTime);
+			});
+		}
+		catch (e){QSI.dbg.c(e);}
+	},
+	startClickTracking:function()
+	{
+		try {
+			var click = function(e){
+				e=e||window.event;
+				var el;
+				if (e.target) el = e.target;
+				else if (e.srcElement) el = e.srcElement;
+				if (el.nodeType == 3)
+					el = el.parentNode;
+
+			}
+			QSI.util.observe(window,'click',click);
+		}
+		catch (e){}
+	},
+	logSite:function(url,openTime)
+	{
+		
+		var hist = QSI.profile.get("History", "History");
+		
+		if (hist)
+		{
+			var histArray = hist.split('|');
+			var last = histArray[histArray.length-1];
+			var lastURL = last.split('~')[0];
+			hist +='|';
+		}
+		else
+		{
+			hist = '';
+			var lastURL = '';
+		}
+		if (url != lastURL)
+		{
+			var newEntry = url + '~' + openTime;
+			hist += newEntry;
+			this.writeHistory(hist);
+		}
+	},
+	writeHistory:function(val)
+	{
+		QSI.profile.set('History','History',val);
+	},
+	limitSize:function(val)
+	{
+		if (!val.length)
+			return val;
+		var limit = this.limit;
+		while (val.length > limit)
+		{
+			var histArray = val.split('|');
+			histArray.splice(0,1);
+			val = histArray.join('|');
+		}
+		return val;
+	},
+	get:function()
+	{
+		//var hist = window.name;
+		var hist = QSI.profile.get('History','History') || [];
+		hist = this.limitSize(hist);
+		return hist;
+	},
+	logCurrentURL:function()
+	{
+		var url = window.location.href;
+		var currentTime = new Date()*1;
+		this.logSite(url,currentTime);
+	},
+	logSearch:function()
+	{
+		var referrer = document.referrer;
+		if(referrer.search(/(google.com)|(bing.com)|(yahoo.com)/) >= 0)
+		{
+			var search = ''
+			if (referrer.search(/(google.com)|(bing.com)/) >= 0)
+			{
+				var searchRegex = /q=(.*?)\&/;
+				var result = referrer.match(searchRegex);
+				if (result.length && result[1])
+					search = result[1];
+			}
+			else if (referrer.search(/yahoo.com/) >= 0)
+			{
+				var searchRegex = /p=(.*?)\&/;
+				var result = referrer.match(searchRegex);
+				if (result.length && result[1])
+					search = result[1];
+			}
+			search = unescape(search);
+			QSI.profile.set('History', 'SearchTerm', search);
+		}
+			
+	},
+	logReferrer:function()
+	{
+		var referrer = document.referrer;
+		if(referrer != "")
+		{
+			var a = QSI.util.build('a',{href:referrer});
+			
+			if(a.hostname != document.location.host)
+				QSI.profile.set("History", "SiteReferrer", referrer);
+			QSI.profile.set("History", "PageReferrer", referrer);
+		}
+	},
+	logActionSet:function(asid)
+	{
+		var key = asid;
+		var currentTime = new Date()*1;
+		QSI.profile.set('ActionSetHistory', key, currentTime);
+		QSI.profile.set('ActionSetHistory', key, currentTime,1);
+	},
+	logSurvey:function(sid,ssid)
+	{
+		QSI.profile.set('QualtricsSurveyHistory', sid, ssid, 1);
+	},
+	getSiteReferrer:function()
+	{
+		return QSI.profile.get("History",'SiteReferrer');
+	},
+	getPageReferrer:function()
+	{
+		return QSI.profile.get('History','PageReferrer');
+	},
+	getSearch:function()
+	{
+		var search = QSI.profile.get('History', 'SearchTerm');
+		if (!search)
+			search = '';
+		return search;
+	},
+	getTimeOnSite:function()
+	{
+		var f = this.getFocusTime();
+		var b = this.getBlurTime();
+		return  f+b+'|'+f ;
+	},
+	getFocusTime:function()
+	{
+		var time = QSI.profile.get('History','FocusTime');
+		if (!time)
+			time = 0;
+		return time;
+	},
+	getBlurTime:function()
+	{
+		var time = QSI.profile.get('History','BlurTime');
+		if (!time)
+			time = 0;
+		return time;
+	},
+	getActionSetHistory:function(asid,permanent)
+	{
+		var ts = QSI.profile.get('ActionSetHistory', asid,permanent);
+		if (!ts)
+			ts = 0;
+		return ts;
+	},
+	getPageCount:function()
+	{
+		var hist = QSI.profile.get("History", "History");
+		var pageCount = 0;
+		var pages = [];
+		if (hist)
+		{
+			var histArray = hist.split("|");
+			for(var i = 0, ilen = histArray.length; i < ilen; i++)
+			{
+				pages.push(histArray[i].split("~")[0]);
+			}
+			var uniquePages = {};
+
+			for(var i = 0, ilen = pages.length; i < ilen; i++)
+			{
+				if(!uniquePages[pages[i]])
+				{
+					pageCount++;
+					uniquePages[pages[i]] = true;
+				}
+			}
+		}
+		return {unique:pageCount, total: pages.length};
+	}
+};
+/*****************
+ * Embedded Data Module
+ ****************/
+if (!QSI.EmbeddedData)
+QSI.EmbeddedData = {
+	getHTMLFromDOM:function(id)
+	{
+		var el = QSI.util.$(id);
+		var val = '';
+		if (el)
+		{
+			switch(el.tagName)
+			{
+				//this may need to be updated
+				case 'TEXTAREA':
+				case 'INPUT':
+					val = el.value;
+				break;
+				default:
+					val = el.innerHTML;
+				break;
+			}
+		}
+
+		return val;
+	},
+	getCookieVal:function(name)
+	{
+		var val = '';
+		var cookie = QSI.cookie.get(name);
+		if (cookie)
+			val = cookie;
+		return val;
+	},
+	getURLParameter:function(name)
+	{
+		return QSI.util.getQueryParam(window.location.href,name);
+	},
+	getURLRegexMatch:function(regex)
+	{
+		var regexmatch = /^\/(.*)\/([gim]*)/;
+		regex.match(regexmatch);
+		var val = '';
+		if (RegExp.$1)
+		{
+			//assume that the slashes are used as delimeters and possible flag on the end
+			window.location.href.match(new RegExp(RegExp.$1,RegExp.$2));
+		}
+		else
+		{
+			window.location.href.match(new RegExp(regex));
+		}
+		if (RegExp.$1)
+			return RegExp.$1;
+		else
+			return '';
+	},
+	getJavaScriptValue:function(varName)
+	{
+		var qsi_val = '';
+		try
+		{
+			qsi_val = eval(varName);
+		}
+		catch(e){QSI.dbg.c(e);}
+		return qsi_val;
+	},
+	getHistory:function()
+	{
+		return QSI.history.get();
+	},
+	getTimeOnSite:function()
+	{
+		return QSI.history.getTimeOnSite();
+	},
+	getCurrentPage:function()
+	{
+		return window.location;
+	},
+	getReferer:function()
+	{
+		return QSI.history.getPageReferrer();
+	},
+	getSiteReferer:function()
+	{
+		return QSI.history.getSiteReferrer();
+	},
+	getSearchTerm:function()
+	{
+		return QSI.history.getSearch();
+	},
+	getPageCount:function()
+	{
+		var count = QSI.history.getPageCount();
+		return count.unique;
+	},
+	getPercentagePageViewed:function()
+	{
+		var count = QSI.history.getPageCount();
+		return count.unique;
+	},
+	getSiteInterceptID:function()
+	{
+		return this.siid;
+	},
+	getCreativeID:function()
+	{
+		if(QSI.global.intercepts[this.siid] && QSI.global.intercepts[this.siid].CreativeID)
+			return QSI.global.intercepts[this.siid].CreativeID;
+	},
+	getEmbeddedData:function(siid, ed)
+	{
+		ed = ed || [];
+		var val = '';
+		if (QSI.ed[siid])
+			ed = ed.concat(QSI.ed[siid]);
+		this.siid = siid;
+		val = this.generateDynamicEmbeddedData(ed);
+		return val;
+	},
+	generateDynamicEmbeddedData:function(ed)
+	{
+		var val = '';
+		if(typeof ed == "string")
+			ed = ed.split("");
+		for (var i=0,ilen=ed.length;i<ilen;i++)
+		{
+			try {
+				var set = ed[i];
+				if (set.type && set.name)
+				{
+					var resolvedVal = '';
+
+					switch(set.type)
+					{
+						default:
+							if (this['get'+set.type])
+							{
+								resolvedVal = this['get'+set.type](set.value);
+							}
+							else
+							{
+								resolvedVal = set.value;
+							}
+						break;
+						case 'StaticVal':
+							resolvedVal = set.value;
+						break;
+						case 'HTML':
+							resolvedVal = this.getHTMLFromDOM(set.value);
+						break;
+						case 'Cookie':
+							resolvedVal = this.getCookieVal(set.value);
+						break;
+						case 'QueryParam':
+							resolvedVal = this.getURLParameter(set.value);
+						break;
+						case 'URLRegex':
+							resolvedVal = this.getURLRegexMatch(set.value);
+						break;
+						case 'JavaScriptVal':
+							resolvedVal = this.getJavaScriptValue(set.value);
+						break;
+					}
+					//truncate more than 500 chars and escape to put on the url.
+					resolvedVal = String(resolvedVal);
+					resolvedVal = resolvedVal.substr(0,500);
+					resolvedVal = encodeURIComponent(resolvedVal);
+					val += ('&' + set.name + '=' + resolvedVal);
+
+				}
+			}
+			catch(e){QSI.dbg.c(e);}
+		}
+		return val;
+	}
+};/*****************
+ * PopUnder Target module
+ ****************/
+if (window.QSI.PopUnderTarget === undefined)
+QSI.PopUnderTarget = QSI.util.Class(
+{
+	initialize:function(url, options)
+	{
+		this.options = options || {};
+		this.url = url;
+		this.width = options.targetFullScreen?screen.availWidth||screen.width||size[0]:options.targetWidth;
+		this.height = options.targetFullScreen?screen.availHeight||screen.height||size[1]:options.targetHeight;
+		
+		
+		
+		this.openPopUnder();
+	},
+	openPopUnder: function()
+	{
+		try
+		{
+			var onloadtime = new Date();
+			var openedFrom = window.location.href;
+			QSI.cookie.set('QSIPopUnder','true');
+			//Determine where to place the pop-under window
+			var parentTop = (window.screenTop) ? window.screenTop : window.screenY;
+			var parentLeft = (window.screenLeft) ? window.screenLeft : window.screenX;
+
+			if (!parentLeft)	//IE6 may not have reported these if maximized
+				parentLeft = 0;
+			if (!parentTop)
+				parentTop = 0;
+
+			parentTop += 20;
+			parentLeft += 20;
+
+			var width = this.width;
+			var height = this.height;
+			try
+			{
+				//try to grab the previous window or the window without setting the document.domain
+				this.watcher = window.open('', 'QSIPopUnderTargetWindow', 'width=' + width + ',height=' + height + ',location=1,status=1,scrollbars=0,resizable=1,top=' + parentTop + ',left=' + parentLeft);
+				this.watcher.openerURL = openedFrom;
+				this.watcher.document.write('');
+				this.watcher.document.write('');	//Sometimes it fails on 2 writes
+			}
+			catch (e)
+			{
+				//it didn't work so try adding the appropriate document.domain (thanks IE)
+				var s = '<script>document.domain="'+document.domain+'";</'+'script>';
+				this.watcher = window.open('javascript:document.write(\''+s+'\')', 'QSIPopUnderTargetWindow', 'width='+width+',height='+height+',scrollbars=1,resizable=1,top='+parentTop+',left='+parentLeft);
+
+				var success = false;
+				for (var i=0; i< 20000 && !success; i++)
+				{
+					try
+					{
+						this.watcher.openerURL = openedFrom;
+						success = true;
+					}
+					catch(e)
+					{
+					}
+				}
+
+				if (!success)
+				{
+					this.watcher.close();
+					QSI.cookie.erase('QSIPopUnder');//Clean up
+					return;//Give up
+				}
+			}
+			this.watcher.openerURL = openedFrom;
+			this.watcher.openerOnLoadTime = onloadtime;
+			var html = '<iframe id="PopUnderTargetFrame" width='+width+' height='+height+' frameborder=false border=false style="border:none;" scrolling=yes src="'+this.url+'"></iframe>';
+			var qsdal = this.watcher.document;
+			qsdal.write('<body style="padding:0px;margin:0px;">');
+			qsdal.write('<script type="text/javascript">');
+			qsdal.write('var popunderTargetWatcher = ' + eval(QSI.popunderTargetWatcher).toString() + '; var w = new popunderTargetWatcher(); ');
+			//qsdal.write('w.initialize('+this.popunderHelperOptions+');');
+			qsdal.write('w.oWidth='+width +';');
+			qsdal.write('w.oHeight='+height +';');
+			//qsdal.write('w.startWatching();');
+			qsdal.write('</script>');
+			qsdal.write(html);
+			qsdal.write('</body>');
+			qsdal.close();
+			
+			if (this.watcher)
+			{
+				if (QSI.Browser.name != 'Chrome')
+					this.watcher.blur();
+				window.focus();
+				setTimeout(function(){window.focus();},1);
+				this.watcher.w.initialize({
+					showOnPageChange:false,
+					showOnSiteExit:true,
+					checkThreshold:3,
+					watchInterval:1000,
+					width: width,
+					height: height,
+					parentTop:parentTop,
+					parentLeft:parentLeft
+				});
+				this.watcher.w.url = this.url;
+				this.watcher.w.startWatching();
+			}
+			
+			if (QSI.Browser.name == 'Firefox' && QSI.Browser.version >= 4)
+			{
+				this.watcher.init = function(p)
+				{
+					with(p)
+					{
+						(function(){
+							if (typeof window.mozPaintCount != 'undefined')
+							{
+								var x = window.open('about:blank');
+								x.close();
+							}
+							try
+							{
+								opener.window.focus();
+							}
+							catch(e)
+							{}
+						})();
+					}
+				}
+				this.watcher.init(this.watcher);
+			}
+		}
+		catch (e)
+		{
+			QSI.dbg.c(e);
+		}
+	}
+});
+QSI.popunderTargetWatcher = function(){
+	this.initialize = function(options)
+	{
+		this.options = options || {};
+		this.iframe = document.getElementById('PopUnderTargetFrame');
+		var that = this;
+		window.onresize = function(e)
+		{
+			var size = that.getWindowSize();
+			that.iframe.style.width = size[0] + 'px';
+			that.iframe.style.height = size[1] + 'px';
+		}
+		window.onfocus = function(e)
+		{
+			window.onfocus = null;
+			that.focused = true;
+		}
+	};
+	this.watch = function()
+	{
+
+		var checkCount = 1;
+		var that = this;
+		this.lastLoc = window.opener.location;
+		this.ival = setInterval(function(){
+			try{
+				if (that.popunderDead)
+					that.killPopunder();
+			}
+			catch(e)
+			{
+
+			}
+			var loc = null;
+			try
+			{
+				loc = ''+window.opener.location;
+
+			}
+			catch(e)
+			{
+				loc = null;
+			}
+			if(!loc)
+			{
+				if(checkCount < that.options.checkThreshold)
+				{
+					checkCount++;
+				}
+				else
+				{
+					that.onSiteExit();
+				}
+			}
+			else
+			{
+				if (that.lastLoc != loc)
+				{
+					that.onSiteChange();
+				}
+				that.lastLoc = loc;
+				checkCount = 1;	//Reset if we were successful
+			}
+		}, this.options.watchInterval);
+	};
+	this.clearWatcher = function()
+	{
+		if (this.ival)
+			clearInterval(this.ival);
+	};
+	this.destroyPopunder = function()
+	{
+		try {
+			this.clearWatcher();
+			window.opener = self;
+			window.close();
+
+		}
+		catch(e)
+		{
+
+		}
+	};
+	this.showPopunder = function()
+	{
+		this.clearWatcher();
+		try
+		{
+			
+			if (window.opener && !window.opener.closed)
+			{
+				window.opener.blur();
+			}
+			window.blur();
+			window.focus();
+			
+			if (!this.focused)
+			{
+				var old = window.open('','QSIPopUnderTargetWindow');
+				//old.close();
+				//window.open(this.iframe.src,'QSIPopUnderTargetWindow','alwaysRaised=1,width='+this.options.width+',height='+this.options.height+',scrollbars=yes,resizable=0,top='+this.options.parentTop+',left='+this.options.parentLeft+')');
+			}
+		}
+		catch(e){
+		}
+		
+	};
+	this.killPopunder = function()
+	{
+		try {
+			this.clearWatcher();
+			this.destroyPopunder();
+		}
+		catch(e)
+		{
+
+		}
+	};
+
+	this.startWatching = function()
+	{
+		//try to save the opener's url
+		this.watch();
+	},
+	this.onSiteChange = function()
+	{
+		if (this.popunderDead)
+			this.killPopunder();
+		else if (this.options.showOnPageChange)
+			this.showPopunder();
+	};
+	this.onSiteExit = function()
+	{
+		if (this.popunderDead)
+			this.killPopunder();
+		else if (this.options.showOnSiteExit)
+			this.showPopunder();
+	}
+	this.getWindowSize = function(){
+		var myWidth = 0, myHeight = 0;
+		if( typeof( window.innerWidth ) != 'undefined' ) {
+			//Non-IE
+			myWidth = window.innerWidth;
+			myHeight = window.innerHeight;
+		}
+		else if( document.documentElement && ( document.documentElement.clientWidth || document.documentElement.clientHeight ) ) {
+			//IE 6+ in 'standards compliant mode'
+			myWidth = document.documentElement.clientWidth;
+			myHeight = document.documentElement.clientHeight;
+		}
+		else if( document.body && ( document.body.clientWidth || document.body.clientHeight ) ) {
+			//IE 4 compatible
+			myWidth = document.body.clientWidth;
+			myHeight = document.body.clientHeight;
+		}
+		return ([myWidth,myHeight]);
+	};
+};/*****************
+ * PopOver module
+ ****************/
+
+if (window.QSI.PopOver === undefined)
+QSI.PopOver = QSI.util.Class(
+{
+	initialize:function(options)
+	{
+		this.globalInitialize(options);
+		
+		this.minTop = options.elements.MinTop;
+		this.minLeft = options.elements.MinLeft;
+		
+		this.elements = options.elements.Elements || [];
+		this.imageQueue = 0;
+		this.loaded = false;
+		this.timeout = false;
+		var that = this;
+
+		if (this.displayOptions.autoClose)
+		{
+			QSI.util.observe(window, 'message', function(e){
+				if (e.data == 'closeQSIWindow')
+				{
+					that.close();
+				}
+
+			});
+		}
+		
+		for(var i = 0, ilen = this.elements.length; i < ilen; i++)
+		{
+			var element = this.elements[i];
+			if(element.locators)
+			{
+				QSI.PipedText.setLocators(element.locators);
+				element.content = QSI.PipedText.evaluateLocators(element.content);
+			}
+		}
+
+		
+		
+		if (this.displayOptions.auto)
+		{
+
+			if (this.displayOptions.prebuild)
+			{
+				this.container = this.build();
+				var popOverImages = this.container.getElementsByTagName('img');
+				
+				for(var i = 0, ilen = popOverImages.length; i < ilen; i++)
+				{
+					if(!popOverImages[i].complete)
+					{
+						this.imageQueue++;
+						popOverImages[i].onload = function() {
+							that.imageQueue--;
+							if(that.imageQueue === 0)
+							{
+								that.imageLoadFinished();
+							}
+						};
+					}
+				}
+				if(this.imageQueue == 0)
+				    this.imageLoadFinished();
+				document.body.appendChild(this.container);
+
+				this.displayPopup();
+			}
+
+		}
+	},
+	timeOutFinished:function()
+	{
+	    this.timeOutComplete = true;
+	    this.ready();
+	},
+	imageLoadFinished:function()
+	{
+	    this.imageLoadComplete = true;
+	    this.ready();
+	},
+	ready:function()
+	{
+	    if(this.imageLoadComplete && this.timeOutComplete && !this.poppedUp)
+		{
+			this.popup();
+			this.poppedUp = true;
+		}
+	},
+	displayPopup: function()
+	{
+		var delay = this.displayOptions.delay * 1000;
+		var that = this;
+		window.setTimeout(function(){
+			that.timeOutFinished();
+		}, delay);
+	},
+	close:function()
+	{
+		try
+		{
+			this.refocus();
+			this.container.parentNode.removeChild(this.container);
+
+			if (this.displayOptions.shadowBox)
+			{
+				this.shadowBox.parentNode.removeChild(this.shadowBox);
+				document.body.style.overflow = 'auto';
+			}
+			
+			QSI.util.stopObserving(window, 'resize', this.resizeHandler);
+			if (QSI.callbacks[this.id].onClose)
+				QSI.callbacks[this.id].onClose();
+			
+		}
+		catch(e){}
+
+	},
+	refocus:function()
+	{
+		try {
+			if (this.hasIframe && QSI.util.isIE8())
+			{
+				var scrollY = document.body.scrollTop;
+				var scrollX = document.body.scrollLeft;
+				var input = QSI.util.build('input',{type:'text'});
+				document.body.appendChild(input);
+				input.focus();
+				document.body.removeChild(input);
+				window.scrollTo(scrollX,scrollY);
+			}
+		}
+		catch(e){}
+	},
+	getFinalPosition:function()
+	{
+		var width = this.width;
+		var height = this.height;
+		var scrollOffsets = QSI.util.getScrollOffsets();
+		var docSize = QSI.util.getPageSize();
+		var docWidth = docSize.width;
+		var docHeight = docSize.height;
+		if(width > docWidth) width = docWidth;
+		if(height > docHeight) height = docHeight;
+
+		var endPos = this.displayOptions.targetPosition;
+		var windowMargin = 20;
+		var targetX = (docWidth-width)/2;
+		var targetY = (docHeight-height)/2;
+
+		switch(endPos)
+		{
+			default:
+			case 'MC':
+				targetX = (docWidth-width)/2;
+				targetY = (docHeight-height)/2;
+			break;
+			case 'ML':
+				targetX = windowMargin;
+				targetY = (docHeight-height)/2;
+			break;
+			case 'TL':
+				targetX = windowMargin;
+				targetY = windowMargin;
+			break;
+			case 'BL':
+				targetX = windowMargin;
+				targetY = docHeight - height - windowMargin;
+			break;
+			case 'TC':
+				targetX = (docWidth-width)/2;
+				targetY = windowMargin;
+			break;
+			case 'TR':
+				targetX = docWidth - width - windowMargin;
+				targetY = windowMargin;
+			break;
+			case 'MR':
+				targetX = docWidth - width - windowMargin;
+				targetY = (docHeight-height)/2;
+			break;
+			case 'BR':
+				targetX = docWidth - width - windowMargin;
+				targetY = docHeight - height - windowMargin;
+			break;
+			case 'BC':
+				targetX = (docWidth-width)/2;
+				targetY = docHeight - height - windowMargin;
+			break;
+		}
+		if (!QSI.util.isFixed())
+		{
+			targetX += scrollOffsets[0];
+			targetY += scrollOffsets[1];
+		}
+		
+		return {x:targetX,y:targetY};
+	},
+	getStartPosition:function()
+	{
+		var width = this.width;
+		var height = this.height;
+		var docSize = QSI.util.getPageSize();
+		var scrollOffsets = QSI.util.getScrollOffsets();
+		var docWidth = docSize.width;
+		var docHeight = docSize.height;
+		var windowMargin = 20;
+		var startPos = this.displayOptions.startPosition;
+		var startX = -width;
+		var startY = (docHeight-height)/2;
+		switch(startPos)
+		{
+			default:
+			case 'OML':
+				startX = -width;
+				startY = (docHeight-height)/2;
+			break;
+			case 'OTL':
+				startX = -width;
+				startY = -height;
+			break;
+			case 'OTLL':
+				startX = -width;
+				startY = windowMargin;
+			break;
+			case 'OTLT':
+				startX = windowMargin;
+				startY = -height;
+			break;
+			case 'OBL':
+				startX = -width;
+				startY = docHeight;
+			break;
+			case 'OBLL':
+				startX = -width;
+				startY = docHeight-height-windowMargin;
+			break;
+			case 'OBLB':
+				startX = windowMargin;
+				startY = docHeight;
+			break;
+			case 'OTC':
+				startX = (docWidth-width)/2;
+				startY = -height;
+			break;
+			case 'OTR':
+				startX = docWidth;
+				startY = -height;
+			break;
+			case 'OTRR':
+				startX = docWidth;
+				startY = windowMargin;
+			break;
+			case 'OTRT':
+				startX = docWidth-width-windowMargin;
+				startY = -height;
+			break;
+			case 'OMR':
+				startX = docWidth;
+				startY = (docHeight-height)/2;
+			break;
+			case 'OBR':
+				startX = docWidth;
+				startY = docHeight;
+			break;
+			case 'OBRR':
+				startX = docWidth;
+				startY = docHeight-height-windowMargin;
+			break;
+			case 'OBRB':
+				startX = docWidth-width-windowMargin;
+				startY = docHeight;
+			break;
+			case 'OBC':
+				startX = (docWidth-width)/2;
+				startY = docHeight;
+			break;
+		}
+
+		if (!QSI.util.isFixed())
+		{
+			startX += scrollOffsets[0];
+			startY += scrollOffsets[1];
+		}
+		
+		return {x:startX,y:startY};
+	},
+	popup:function()
+	{
+
+		try 
+		{
+			var show = this.shouldShow();
+			if (!show)
+				return;
+			this.resetStyles();
+			var close = this.displayOptions.close * 1000;
+
+			var that = this;
+			if (close != 0)
+			{
+				window.setTimeout(function()
+				{
+					that.close();
+				}, close);
+
+			}
+			if (!this.displayOptions.prebuild || !this.displayOptions.auto)
+			{
+				this.container = this.build();
+				document.body.appendChild(this.container);
+			}
+			if (this.displayOptions.shadowBox)
+			{
+				this.shadowBox = this.buildShadowBox();
+				if (this.displayOptions.shadowBoxFade)
+					this.shadowBoxFadeIn();
+				document.body.style.overflow = 'hidden';
+				document.body.appendChild(this.shadowBox);
+			}
+			this.container.style.zIndex = QSI.global.currentZIndex++;
+			
+			
+			var end = this.getFinalPosition();
+			if (this.displayOptions.animate)
+			{
+				var start = this.getStartPosition();
+				this.animate({x:start.x,y:start.y}, {x:end.x,y:end.y});
+			}
+			else
+			{
+				this.target = {x:end.x,y:end.y};
+				this.finish();
+			}
+			this.resizeHandler = function(){
+				that.resize();
+			};
+			QSI.util.observe(window, 'resize', this.resizeHandler);
+		}
+		catch(e){QSI.dbg.c(e);}
+	},
+	build:function()
+	{
+		var elements = [];
+		var maxX = 0;
+		var maxY = 0;
+		for (var i=0,ilen=this.elements.length;i<ilen;i++)
+		{
+			var el = this.buildElement(this.elements[i]);
+			if (el.bc && el.bc.x > maxX)
+				maxX = el.bc.x;
+			if (el.bc && el.bc.y > maxY)
+				maxY = el.bc.y;
+			elements.push(el);
+
+		}
+
+		this.width = maxX;
+		this.height = maxY;
+
+		var dsw = Math.floor(this.width * 1.2);
+		var dsh = Math.floor(this.height * 1.2);
+
+		var position = 'fixed';
+
+		if (!QSI.util.isFixed())
+		{
+			position = 'absolute';
+		}
+
+		if (QSI.util.isIE6())
+		{
+			elements.push(this.buildIFrame(this.width, this.height));
+		}
+
+		var el = QSI.util.build('div',{
+			className:'QSIPopOver ' + this.id + '_PopOverContainer',
+			style:{
+				position:position,
+				top: -dsh +'px',
+				left: -dsw +'px'
+			}
+		}, elements);
+		return el;
+	},
+	buildElement:function(element)
+	{
+		var el;
+		if (this['build'+element.type +'Element'])
+			el = this['build'+element.type +'Element'](element);
+
+		return el;
+	},
+	buildPopOverElement:function(opts)
+	{
+		var el = this.buildBaseElement(opts);
+
+		return el;
+	},
+	buildTextElement:function(opts)
+	{
+		var el = this.buildBaseElement(opts);
+
+		return el;
+	},
+	buildImageElement:function(opts)
+	{
+		var el = this.buildBaseElement(opts);
+
+		return el;
+	},
+	buildTargetElement:function(opts)
+	{
+		var el = this.buildBaseElement(opts);
+		el.style.cursor = 'pointer';
+		var ed = opts.embeddedData || [];
+		
+		var that = this;
+		el.onclick = function(){that.onTargetClick(ed);};
+		return el;
+	},
+	buildEmbeddedTargetElement:function(opts)
+	{
+		this.hasIframe = true;
+		var ed = opts.embeddedData || [];
+		
+		var url = this.getTarget(ed);
+	
+		var iframe = QSI.util.build('iframe',{width:'100%', height:'99%', style:{}, frameBorder:0});
+		setTimeout(function(){iframe.src = url},0);
+		var container = QSI.util.build('div',{className:'scrollable', style:{width:opts.style.width + 'px', height:opts.style.height + 'px', overflow: 'auto'}},[iframe]);
+		opts.content = container;
+		var el = this.buildBaseElement(opts);
+		return el;
+	},
+	buildCloseButtonElement:function(opts)
+	{
+		var el = this.buildBaseElement(opts);
+		
+		el.style.cursor = 'pointer';
+		var that = this;
+		el.onclick = function(){that.onCloseClick();};
+		return el;
+	},
+	buildBaseElement:function(opts)
+	{
+		var atts = {};
+		atts.style = {};
+		var top = (opts.position.top - this.minTop);
+		var left = (opts.position.left - this.minLeft);
+		atts.style = {
+			top:top + 'px',
+			left:left + 'px',
+			position:'absolute',
+
+			zIndex:opts.style.zIndex,
+			width:opts.style.width + 'px',
+			height:opts.style.height + 'px',
+			backgroundColor:opts.style.backgroundColor,
+			borderWidth:opts.style.borderWidth + 'px',
+			borderColor:opts.style.borderColor,
+			borderStyle:'solid'
+		};
+		if (opts.style.backgroundImage)
+			atts.style.backgroundImage = 'url('+opts.style.backgroundImage+')';
+		if (opts.style.opacity != 100)
+		{
+			atts.style.opacity = opts.style.opacity / 100;
+			atts.style.filter = 'alpha(opacity = ' +opts.style.opacity + ')';
+		}
+		
+		var contents = QSI.util.build('div',{style:{
+				position:'absolute',
+				top:0,
+				left:0,
+				width:opts.style.width + 'px',
+				height:opts.style.height + 'px',
+				overflow:'hidden'
+		}});
+		var el = QSI.util.build('div', atts,[contents]);
+		if (opts.content)
+		{
+			if (typeof opts.content == 'string')
+				contents.innerHTML = opts.content;
+			else if (typeof opts.content == 'object')
+				contents.appendChild(opts.content);
+		}
+		var b = opts.style.borderWidth;
+		if (isNaN(b))
+			b = 0;
+		var w = Math.floor(opts.style.width*1 + (2*b));
+		var h = Math.floor(opts.style.height*1 + (2*b));
+		if (opts.dropShadow)
+		{
+			el.insertBefore(this.buildDropShadow(w, h, b),el.childNodes[0]);
+		}
+		
+
+		var dims = QSI.util.getDimensions(el);
+		el.bc = {x:left+dims.width,y:top+dims.height};
+		if (QSI.util.isIE6())
+		{
+			var imgs = el.getElementsByTagName('img');
+			for (var i=0, ilen=imgs.length;i<ilen;i++)
+			{
+				var image = imgs[i];
+				var node = QSI.util.fixPNG(image);
+				image.parentNode.replaceChild(node, image);
+			}
+		}
+		return el;
+	},
+	buildDropShadow:function(w, h, b)
+	{
+
+		var t = Math.ceil(-(h * .1)) - b;
+		var l = Math.ceil(-(w * .1)) - b;
+		var dsw = Math.floor(w * 1.2);
+		var dsh = Math.floor(h * 1.2);
+		var style = {
+			width: dsw + 'px',
+			height: dsh + 'px',
+			top: t + 'px',
+			left: l + 'px',
+			position: 'absolute'
+		};
+		var img = QSI.util.build('img',{
+			src: QSI.global.imagePath + '/siteintercept/popup_shadow_transparent.png',
+			style:style
+		});
+
+		if (QSI.util.isIE6())
+		{
+			img = QSI.util.fixPNG(img);
+		}
+		return img;
+	},
+	onCloseClick:function()
+	{
+		this.close();
+	},
+	onTargetClick:function(ed)
+	{
+		this.close();
+		var url = this.getTarget(ed);
+		var actionOptions = this.actionOptions;
+		QSI.util.openTarget(url, actionOptions);
+		
+	},
+	buildIFrame:function(width, height)
+	{
+		var iframe = QSI.util.build('iframe',{
+			style:{
+				border:'none',
+				position: 'absolute',
+				top: 0,
+				left: 0,
+				filter:"progid:DXImageTransform.Microsoft.Alpha(style=0,opacity=0)"
+			},
+			width: width + 'px',
+			height: height + 'px',
+			frameBorder:'0',
+			src:QSI.global.imagePath +'/blank.html'
+		});
+
+		return iframe;
+	},
+	buildShadowBox:function()
+	{
+		var opacity = this.displayOptions.shadowBoxOpacity;
+		var color = this.displayOptions.shadowBoxColor;
+		var dim = QSI.util.getPageSize();
+		var width = dim.width;
+		var height = dim.height;
+		var scrollOffsets = QSI.util.getScrollOffsets();
+		var overlay = QSI.util.build('div',{
+			style:{
+				position:'absolute',
+				backgroundColor:color,
+				left:scrollOffsets[0]+'px',
+				top:scrollOffsets[1]+'px',
+				width:width + 'px',
+				height:height + 'px',
+				opacity:opacity,
+				zIndex:QSI.global.currentZIndex++,
+				filter:"alpha(opacity="+(opacity*100)+")"
+			}
+		});
+		return overlay;
+	},
+	updateShadowBox:function()
+	{
+		if (this.shadowBox)
+		{
+			var dim = QSI.util.getPageSize();
+			var width = dim.width;
+			var height = dim.height;
+
+			this.shadowBox.style.width = width+'px';
+			this.shadowBox.style.height = height+'px';
+		}
+	},
+	shadowBoxFadeIn:function()
+	{
+		this.shadowBox.style.opacity = 0;
+		this.shadowBoxFadeInStep();
+	},
+	shadowBoxFadeInStep:function()
+	{
+
+		var step = this.displayOptions.shadowBoxOpacity/10;
+		var opacity = this.shadowBox.style.opacity*1;
+		if (opacity < this.displayOptions.shadowBoxOpacity)
+		{
+
+			this.shadowBox.style.opacity = opacity + step;
+			this.shadowBox.style.filter = "alpha(opacity = " + (opacity + step) * 100 + ")";
+			var that = this;
+			setTimeout(function(){that.shadowBoxFadeInStep();},30);
+		}
+	},
+	animate:function(start, target)
+	{
+		var element = this.container;
+		element.style.display = 'none';
+		var fps = 30;
+		this.start = start;
+		this.target = target;
+		this.duration = this.displayOptions.duration || 1500;
+		this.totalFrames  = fps*this.duration;
+		this.currentFrame = 0;
+		this.transition = this[this.displayOptions.transition] || this.easeto;
+		this.from = 0;
+		this.to = 1;
+		this.fromToDelta  = this.to-this.from;
+		this.x = this.target.x - this.start.x;
+		this.y = this.target.y - this.start.y;
+		element.style.left = start.x+'px';
+		element.style.top = start.y+'px';
+		//element.style.zoom=1;
+		var timePos = new Date().getTime();
+		this.startOn = timePos + 0;
+		this.finishOn = this.startOn + this.duration;
+		this.totalTime    = this.finishOn-this.startOn;
+		this.container.style.display = 'block';
+
+		var that=this;
+		this.interval = setInterval(function()
+		{
+			var timePos = new Date().getTime();
+			that.loop(timePos);
+		}, 15);
+	},
+	loop:function(timePos)
+	{
+		if (timePos >= this.startOn)
+		{
+			if (timePos >= this.finishOn)
+			{
+				clearInterval(this.interval);
+				this.update(1.0);
+			}
+			var pos = (timePos - this.startOn) / this.totalTime;
+			var frame = Math.round(pos * this.totalFrames);
+			if (frame > this.currentFrame)
+			{
+				this.update(pos);
+				this.currentFrame = frame;
+			}
+		}
+	},
+	update:function(pos)
+	{
+		if (pos >= 1)
+		{
+			this.finish();
+			return;
+		}
+		var mPos=this.transition(pos)*this.fromToDelta + this.from;
+		this.container.style.left = Math.round((this.x * mPos + this.start.x)) + 'px';
+		this.container.style.top = Math.round((this.y * mPos + this.start.y)) + 'px';
+
+	},
+	finish:function()
+	{
+		if (this.finished)
+			return;
+		try
+		{
+			//force it into final position
+			this.container.style.left = this.target.x + 'px';
+			this.container.style.top = this.target.y + 'px';
+			
+			QSI.util.impress(this.options.impressionURL);
+			this.finished = true;
+			
+			if (QSI.callbacks && QSI.callbacks[this.id].onPopup)
+				QSI.callbacks[this.id].onPopup();
+			
+			if(!QSI.util.isFixed())
+			{
+				QSI.util.positionFixed(this.container, this.container.style.top, 'auto');
+			}
+		}
+		catch(e){QSI.dbg.c(e);}
+	},
+	reposition:function()
+	{
+		var pos = this.getFinalPosition();
+		this.container.style.left = pos.x + 'px';
+		this.container.style.top = pos.y + 'px';	
+	},
+	resize:function()
+	{
+		this.reposition();
+		this.updateShadowBox();
+	},
+	staticly:function(pos)
+	{
+		return 1;
+	},
+	linear:function(pos) {
+		return pos;
+	},
+	inquad:function(pos) {
+		return pos*pos;
+	},
+	easeto:function(pos) {
+		if ((pos/=0.5) < 1) return 0.5*Math.pow(pos,4);
+		return -0.5 * ((pos-=2)*Math.pow(pos,3) - 2);
+	},
+	sinoidal:function(pos) {
+		return (-Math.cos(pos*Math.PI)/2) + 0.5;
+	},
+	reverse:function(pos) {
+		return 1-pos;
+	},
+	bounce:function(pos) {
+		if (pos < (1 / 2.75))
+		{
+			return (7.5625 * pos * pos);
+		}
+		else if (pos < (2 / 2.75))
+		{
+			return (7.5625 * (pos -= (1.5 / 2.75)) * pos + .75);
+		}
+		else if (pos < (2.5 / 2.75))
+		{
+			return (7.5625 * (pos -= (2.25 / 2.75)) * pos + .9375);
+		}
+		else
+		{
+			return (7.5625 * (pos -= (2.625 / 2.75)) * pos + .984375);
+		}
+	},
+	elastic:function(pos) {
+		return -1*Math.pow(4,-8*pos) * Math.sin((pos*6-1)*(2*Math.PI)/2) + 1;
+	},
+	swingFromTo:function(pos) {
+		var s = 1.70158;
+		if ((pos/=0.5) < 1) 
+			return 0.5*(pos*pos*(((s*=(1.525))+1)*pos - s));
+		return 0.5*((pos-=2)*pos*(((s*=(1.525))+1)*pos + s) + 2);
+	},
+	swingFrom:function(pos) {
+		var s = 1.70158;
+		return pos*pos*((s+1)*pos - s);
+	},
+	swingTo:function(pos) {
+		var s = 1.70158;
+		return (pos-=1)*pos*((s+1)*pos + s) + 1;
+	},
+	bouncePast:function(pos) {
+		if (pos < (1/2.75)) {
+		return (7.5625*pos*pos);
+		} else if (pos < (2/2.75)) {
+		return 2 - (7.5625*(pos-=(1.5/2.75))*pos + .75);
+		} else if (pos < (2.5/2.75)) {
+		return 2 - (7.5625*(pos-=(2.25/2.75))*pos + .9375);
+		} else {
+		return 2 - (7.5625*(pos-=(2.625/2.75))*pos + .984375);
+		}
+	},
+	easeFromTo:function(pos) {
+		if ((pos/=0.5) < 1) return 0.5*Math.pow(pos,4);
+		return -0.5 * ((pos-=2)*Math.pow(pos,3) - 2);
+	},
+	easeFrom:function(pos) {
+		return Math.pow(pos,4);
+	}
+});/*********************
+ * Empty Javascript Module
+ *********************/
+
+if (window.QSI.Empty === undefined)
+QSI.Empty = QSI.util.Class(
+{
+	initialize:function(options)
+	{
+		this.globalInitialize(options);
+	}
+});QSI.util.watchPage();
+QSI.util.observe(window, 'message', function(e){
+	if (e.data)
+	{
+		var parts = e.data.split('|');
+		if (parts[0] == 'QualtricsEOS')
+		{
+			var sid = parts[1];
+			var ssid = parts[2];
+			QSI.history.logSurvey(sid,ssid);
+		}
+	}
+
+});
+QSI.history.logVisit('SI_bKPw41urbmSQLVG', 'AS_39022060');
+(function(){
+	var QSIEmpty = new QSI.Empty({
+		id:'SI_bKPw41urbmSQLVG',
+		type:'Empty'
+	});
+	QSI.reg['SI_bKPw41urbmSQLVG'] = QSIEmpty;
+})();}catch(e){QSI.dbg.c(e);}
