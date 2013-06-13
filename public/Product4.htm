@@ -4716,31 +4716,31 @@ cmCreateManualPageviewTag(pageId, categoryId,window.location.href,document.refer
 
 <div>
 <script type="text/javascript">
-    var customEvent = document.createEvent('Event');
-    customEvent.initEvent('fire1CartEvent', true, true);
+  var customEvent = document.createEvent('Event');
+  customEvent.initEvent('palacartDetails', true, true);
 
-    function fireAddToCart(product, variantoptions) {
-        //variantfilter = "tshirt-color:Red;tshirt-size:Small";            
-        fire1CartEvent(product, variantoptions);
-    }
+  function addToPalacart(product, variantoptions) {
+	  palacartEvent(product, variantoptions);
+  }
 
-    function fire1CartEvent(product, variantoptions) {
-        var items = null; //declare array
-        if (variantoptions == undefined) {
-            variantoptions = [];
-        }
-        var optionValue = JSON.stringify(variantoptions);
-        items = product.toString().replace(" ", "-").toLowerCase() + ";" + optionValue;
-        hiddenDiv = document.getElementById('myAddToCartDiv');
-        hiddenDiv.setAttribute("data-options", items);
-        hiddenDiv.dispatchEvent(customEvent);
-    }
+  function palacartEvent(product, variantoptions) {
+  var items = null; //declare array
+  if (variantoptions == undefined) {
+  variantoptions = [];
+  }
+
+  var optionValue = JSON.stringify(variantoptions);
+  items = product.toString().replace(" ", "-").toLowerCase() + ";" + optionValue;
+  hiddenDiv = document.getElementById('palacartDetails');
+  hiddenDiv.setAttribute("data-options", items);
+  hiddenDiv.dispatchEvent(customEvent);
+  }
 </script>
 
-<button id="btn1Cart" title="Add to 1Cart" style="vertical-align:middle;text-align:center;padding-left:15px;" onclick="fireAddToCart('studio-360tc-fit-true-wrinkle-free-sheet-set',[{'option_value':{'option_type_name':'tshirt-color', 'option_type_value':'Red'}}, {'option_value':{'option_type_name':'tshirt-size', 'option_type_value':'Small'}}]);">Add to 1Cart</button>
+<button id="btn1Cart" title="Add to 1Cart" style="vertical-align:middle;text-align:center;padding-left:15px;" onclick="addToPalacart('studio-360tc-fit-true-wrinkle-free-sheet-set',[{'option_value':{'option_type_name':'tshirt-color', 'option_type_value':'Red'}}, {'option_value':{'option_type_name':'tshirt-size', 'option_type_value':'Small'}}]);">Add to Palacart</button>
 
 </div>
-<div id="myAddToCartDiv" style="display: none;">
+<div id="palacartDetails" style="display: none;">
                         </div>
 
 <!--<div class="btn_input_holder red_button" id="intlselectenablebtn">
