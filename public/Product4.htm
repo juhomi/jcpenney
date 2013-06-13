@@ -4715,27 +4715,7 @@ cmCreateManualPageviewTag(pageId, categoryId,window.location.href,document.refer
 
 
 <div>
-<script type="text/javascript">
-  var customEvent = document.createEvent('Event');
-  customEvent.initEvent('palacartDetails', true, true);
-
-  function addToPalacart(product, variantoptions) {
-	  palacartEvent(product, variantoptions);
-  }
-
-  function palacartEvent(product, variantoptions) {
-  var items = null; //declare array
-  if (variantoptions == undefined) {
-  variantoptions = [];
-  }
-
-  var optionValue = JSON.stringify(variantoptions);
-  items = product.toString().replace(" ", "-").toLowerCase() + ";" + optionValue;
-  hiddenDiv = document.getElementById('palacartDetails');
-  hiddenDiv.setAttribute("data-options", items);
-  hiddenDiv.dispatchEvent(customEvent);
-  }
-</script>
+<script type = "text/javascript" src="https://palacart.herokuapp.com/palacart.js"></script>
 
 <button id="btn1Cart" title="Add to 1Cart" style="vertical-align:middle;text-align:center;padding-left:15px;" onclick="addToPalacart('studio-360tc-fit-true-wrinkle-free-sheet-set',[{'option_value':{'option_type_name':'tshirt-color', 'option_type_value':'Red'}}, {'option_value':{'option_type_name':'tshirt-size', 'option_type_value':'Small'}}]);">Add to Palacart</button>
 
